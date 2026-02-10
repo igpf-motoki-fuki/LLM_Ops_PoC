@@ -15,9 +15,14 @@ processors:
     limit_mib: 512
 
 exporters:
-  # メトリクス → Prometheus
-  prometheusremotewrite:
-    endpoint: http://prometheus:9090/api/v1/write
+  # メトリクス → Prometheus (スクレイプ形式)
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    namespace: claude_code
+    send_timestamps: true
+    metric_expiration: 5m
+    resource_to_telemetry_conversion:
+      enabled: true
 
   # ログ → Loki
   loki:
@@ -28,7 +33,7 @@ service:
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [prometheusremotewrite]
+      exporters: [prometheus]
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch]
