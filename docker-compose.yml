@@ -8,6 +8,7 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.retention.time=90d'
+      - '--web.enable-remote-write-receiver'
     ports:
       - "9090:9090"
     restart: unless-stopped
@@ -26,8 +27,58 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+      - loki
+    restart: unless-stopped
+
+  claude-code-exporter:
+    build: ./exporter
+    container_name: claude-code-exporter
+    environment:
+      - ANTHROPIC_ADMIN_API_KEY=${ANTHROPIC_ADMIN_API_KEY}
+      - EXPORTER_PORT=9101
+      - POLL_INTERVAL_SEC=3600
+    ports:
+      - "9101:9101"
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: loki
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/config.yml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/config.yml
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: promtail
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: otel-collector
+    volumes:
+      - ./otel-collector/otel-collector-config.yml:/etc/otelcol-contrib/config.yaml
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8888:8888"
+    depends_on:
+      - prometheus
+      - claude-code-exporter
     restart: unless-stopped
 
 volumes:
   prometheus_data:
   grafana_data:
+  loki_data:

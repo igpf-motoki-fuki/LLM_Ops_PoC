@@ -8,8 +8,7 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # 後で追加するClaude Code Exporter用
-  # - job_name: 'claude_code_exporter'
-  #   scrape_interval: 300s
-  #   static_configs:
-  #     - targets: ['host.docker.internal:9101']
+  # OTEL Collectorの内部メトリクス
+  - job_name: 'otel-collector'
+    static_configs:
+      - targets: ['otel-collector:8888']
