@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 60s
+  evaluation_interval: 60s
+
+scrape_configs:
+  # Prometheus自身の監視
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 後で追加するClaude Code Exporter用
+  # - job_name: 'claude_code_exporter'
+  #   scrape_interval: 300s
+  #   static_configs:
+  #     - targets: ['host.docker.internal:9101']
