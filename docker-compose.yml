@@ -30,17 +30,6 @@ services:
       - loki
     restart: unless-stopped
 
-  claude-code-exporter:
-    build: ./exporter
-    container_name: claude-code-exporter
-    environment:
-      - ANTHROPIC_ADMIN_API_KEY=${ANTHROPIC_ADMIN_API_KEY}
-      - EXPORTER_PORT=9101
-      - POLL_INTERVAL_SEC=3600
-    ports:
-      - "9101:9101"
-    restart: unless-stopped
-
   loki:
     image: grafana/loki:3.0.0
     container_name: loki
@@ -75,7 +64,7 @@ services:
       - "8888:8888"
     depends_on:
       - prometheus
-      - claude-code-exporter
+      - loki
     restart: unless-stopped
 
 volumes:

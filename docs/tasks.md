@@ -1,55 +1,59 @@
-# OTEL Collector + Loki 追加実装タスクリスト
+# OTEL Collector + Loki 監視スタック タスクリスト
 
 ## 概要
 
-Claude Code監視スタックにOTEL Collector、Loki、Promtailを追加し、フル機能の監視基盤を構築する。
+各開発者PCからOTLPでテレメトリを収集する監視基盤を構築する。
 
 ## タスク一覧
 
 ### 新規ファイル作成
 
-- [x] **Task 1**: `exporter/Dockerfile` - Exporterコンテナ化
-- [x] **Task 2**: `loki/loki-config.yml` - Lokiサーバー設定
-- [x] **Task 3**: `promtail/promtail-config.yml` - ログ収集設定
-- [x] **Task 4**: `otel-collector/otel-collector-config.yml` - OTEL Collector設定
-- [x] **Task 5**: `grafana/provisioning/datasources/loki.yml` - Lokiデータソース
+- [x] **Task 1**: `loki/loki-config.yml` - Lokiサーバー設定
+- [x] **Task 2**: `promtail/promtail-config.yml` - Dockerログ収集設定
+- [x] **Task 3**: `otel-collector/otel-collector-config.yml` - OTEL Collector設定（OTLP受信）
+- [x] **Task 4**: `grafana/provisioning/datasources/loki.yml` - Lokiデータソース
 
 ### 既存ファイル変更
 
-- [x] **Task 6**: `docker-compose.yml` - 4サービス追加（exporter, loki, promtail, otel-collector）
-- [x] **Task 7**: `prometheus/prometheus.yml` - OTEL Collector scrape設定追加
+- [x] **Task 5**: `docker-compose.yml` - loki, promtail, otel-collector追加
+- [x] **Task 6**: `prometheus/prometheus.yml` - remote-write有効化
 
 ### 検証
 
-- [ ] **Task 8**: 全サービス起動確認
+- [ ] **Task 7**: 全サービス起動確認
+- [ ] **Task 8**: OTLP受信テスト
 - [ ] **Task 9**: Grafanaでメトリクス・ログ表示確認
 
-## 依存関係
+## アーキテクチャ
 
 ```
-Task 1 (Dockerfile)
-    ↓
-Task 6 (docker-compose.yml) ← Task 2, 3, 4, 5
-    ↓
-Task 7 (prometheus.yml)
-    ↓
-Task 8, 9 (検証)
+開発者PC (Claude Code)
+    │
+    │ OTLP (gRPC:4317 / HTTP:4318)
+    ▼
+OTEL Collector
+    │
+    ├──→ Prometheus (メトリクス)
+    └──→ Loki (ログ)
+           │
+           ▼
+        Grafana
 ```
 
 ## 検証コマンド
 
 ```bash
-# 環境変数設定
-export ANTHROPIC_ADMIN_API_KEY=sk-ant-admin-xxx
-
 # 全サービス起動
-docker compose up -d --build
+docker compose up -d
 
 # 各サービス確認
-curl http://localhost:9101/metrics      # Exporter
+docker compose ps
 curl http://localhost:9090/-/ready      # Prometheus
 curl http://localhost:3100/ready        # Loki
 curl http://localhost:8888/metrics      # OTEL Collector
+
+# OTLP受信テスト (grpcurl必要)
+grpcurl -plaintext localhost:4317 list
 
 # Grafana: http://localhost:3000 (admin/changeme)
 ```
@@ -58,10 +62,17 @@ curl http://localhost:8888/metrics      # OTEL Collector
 
 | サービス | ポート | 用途 |
 |----------|--------|------|
-| Exporter | 9101 | Prometheusメトリクス |
 | Prometheus | 9090 | Web UI / API |
 | Grafana | 3000 | ダッシュボード |
 | Loki | 3100 | ログAPI |
 | OTEL Collector | 4317 | OTLP gRPC |
 | OTEL Collector | 4318 | OTLP HTTP |
 | OTEL Collector | 8888 | 内部メトリクス |
+
+## クライアント設定
+
+各開発者PCでのOTLP設定例:
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://<監視サーバーIP>:4317
+```

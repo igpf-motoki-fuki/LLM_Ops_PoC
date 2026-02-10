@@ -1,11 +1,5 @@
 receivers:
-  prometheus:
-    config:
-      scrape_configs:
-        - job_name: 'claude-code-exporter'
-          scrape_interval: 60s
-          static_configs:
-            - targets: ['claude-code-exporter:9101']
+  # 各開発者PCからのOTLPデータ受信
   otlp:
     protocols:
       grpc:
@@ -21,12 +15,21 @@ processors:
     limit_mib: 512
 
 exporters:
+  # メトリクス → Prometheus
   prometheusremotewrite:
     endpoint: http://prometheus:9090/api/v1/write
+
+  # ログ → Loki
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
 
 service:
   pipelines:
     metrics:
-      receivers: [prometheus, otlp]
+      receivers: [otlp]
       processors: [memory_limiter, batch]
       exporters: [prometheusremotewrite]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [loki]
